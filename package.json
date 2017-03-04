@@ -1,0 +1,9 @@
+{
+  "script": {
+    "start": "node server"
+  },
+  "dependencies": {
+    "izi": "git://github.com/kigiri/izi.git#master",
+    "tupac": "git://github.com/kigiri/tupac.git#master"
+  }
+}
