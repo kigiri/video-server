@@ -20,7 +20,7 @@ module.exports = (initialValue = 0) => {
   el.pause = () => bar.classList.remove(ANIMATED, STRIPED)
   el.start = () => bar.classList.add(ANIMATED, STRIPED)
   el.setValue = n => {
-    n = Math.min(Math.max(n * 100, 0), 100)
+    n = Math.min(Math.max(n * 100, 1.5), 100)
     el.start()
     el.show()
     bar.setAttribute('aria-valuenow', n)

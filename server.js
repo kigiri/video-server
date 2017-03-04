@@ -1,5 +1,5 @@
 const http = require('http')
-const { resolve } = require('path')
+const { resolve, extname } = require('path')
 const { stat, open, write, mkdir } = require('izi/mz')('fs')
 const { split, remove } = require('izi/str')
 const merge = require('izi/collection/merge')
@@ -22,11 +22,14 @@ const send404 = sendError(404, 'Not Found')
 const send500 = sendError(500, 'Internal Server Error')
 const next = res => res.emit && res.emit('next')
 const tmpDir = resolve('tmp')
+const vidDir = resolve('video')
 
-stat(tmpDir).catch(() => mkdir(tmpDir))
+Promise.all([ tmpDir, vidDir ].map(dir => stat(dir).catch(() => mkdir(dir))))
+  .catch(console.error)
 
 tupac({
   weso: true,
+  title: 'Elzéar vidéo server (beta)',
   before: [ (req, res) => {
     const session = weso.getOrInitSession(req, res, {
       superSecure: 'true dat !!',
@@ -53,19 +56,51 @@ tupac({
 
   weso.uploadStart(uploadStart)
   weso.uploadProgress(uploadProgress)
-
-  setInterval(() => {
-    //weso.publish.debug(('lol'))
-  }, 1000)
+  weso.uploadDone(uploadDone)
+  weso.fileChange(fileChange)
 
 }).catch(console.error)
 
-const files = Object.create(null)
-const chunk = 64 * 1024
+const orZero = () => 0
+const _size = f.path('size')
+const getFileSize = path => stat(path).then(_size, orZero)
+const tmpName = name => `${tmpDir}/${name}.part`
+
+const fileChange = ({ data, ws }) => getFileSize(tmpName(data))
+  .then(ws.uploadStatus)
+
+const uploadStart = ({ data: { file }, ws }) => {
+  file.path = tmpName(file.name)
+  ws.session.file = file
+
+  Promise.all([ getFileSize(file.path), open(file.path, "a", 0755) ])
+    .then(([ progress, fd ]) => {
+      file.fd = fd
+      file.progress = progress
+      ws.uploadReady({ progress })
+    })
+    .catch(console.log)
+}
+
+const uploadProgress = ({ data, ws }) => {
+  const file = ws.session.file
+  file.progress += common.chunk
+  write(file.fd, data, null, 'binary')
+    .then(() => ws.uploadReady({ progress: file.progress }))
+    .catch(err => {
+      err.stack = undefined
+      ws.uploadError(err)
+    })
+}
 
 const uploadDone = ({ ws }) => {
+  const file = ws.session.file
   files[ws.id] = undefined
-  console.log('file written')
+  rename(file.path, `${vidDir}/${file.name}`)
+    .then(() => console.log('file ${file.name} uploaded'), console.error)
+
+ffmpeg('/path/to/file.avi')
+
   //Get Thumbnail Here
   /*
 
@@ -81,34 +116,4 @@ const uploadDone = ({ ws }) => {
     socket.emit('Done', {'Image' : 'Video/' + Name + '.jpg'});
   });
   */
-}
-
-const uploadProgress = ({ data, ws }) => {
-  const file = files[ws.id]
-  file.progress += chunk
-  write(file.fd, data, null, 'binary')
-    .then(() => {
-      console.log('sending progress', file.progress)
-      ws.uploadReady({ progress: file.progress })
-    })
-    .catch(err => {
-      err.stack = undefined
-      ws.uploadError(err)
-    })
-}
-
-const uploadStart = ({ data, ws }) => {
-  const name = data.file.name
-  const filepath = `tmp/${name}`
-  const file = files[ws.id] = { filepath, name, size: data.file.size }
-  Promise.all([
-    stat(filepath).then(f.path('size')).catch(() => 0),
-    open(filepath, "a", 0755),
-  ]).then(([ progress, fd ]) => {
-      file.fd = fd
-      file.progress = progress
-      console.log('sending progress', progress)
-      ws.uploadReady({ progress })
-    })
-    .catch(console.log)
 }

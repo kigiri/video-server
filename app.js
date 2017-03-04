@@ -10,20 +10,19 @@ const bsBtn = require('./bs/btn')
 const bsForm = require('./bs/form')
 const { div, h2, label, input, button, form, p, small } = h.proxy
 const prefix = require('izi/prefix')
-const common = require('./common.js')
+const { chunk, wesoServer, wesoClient } = require('./common.js')
 const initWeso = require('izi/weso-browser')
 
 // constants
 const MB = 1048576
-const chunk = 64 * 1024
 
 //* // **** WEBSOCKET LINK **** \\ **\
 const port = window.__tupac__port__
 
 const weso = window.weso = initWeso({
   retryDelay: 2500,
-  publish: common.wesoClient,
-  subscribe: common.wesoServer,
+  publish: wesoClient,
+  subscribe: wesoServer,
 })
 
 weso.on.open((...args) => console.log('open', ...args))
@@ -34,9 +33,10 @@ weso.on.error((...args) => console.error('error', ...args))
 const selectedFile = observ()
 
 const videoMimes = [ '3gp', '3gpp', 'annodex', 'avi', 'm2ts', 'mp4', 'mpeg',
-  'mpeg2', 'ogg', 'quicktime', 'webm', 'x-m2ts', 'x-m4v', 'x-mpeg2',
-  'x-msvideo', 'x-quicktime', '*' ].map(m => `video/${m}`).join()
-
+  'mpeg2', 'ogg', 'quicktime', 'webm', 'x-m2ts', 'x-m4v', 'x-mpeg2', 'x-flv',
+  'x-ms-wmv', 'mp2t', 'x-msvideo', 'x-quicktime', '*' ]
+  .map(m => `video/${m}`)
+  .join()
 
 // interactive elements
 const progressBar = bsProgress(0)
@@ -51,7 +51,12 @@ const userInput = bsForm({
     accept: videoMimes,
     class: 'form-control-file',
     required: true,
-    onchange: f.pipe(f.path('target.files.0'), selectedFile.set),
+    onchange: f.pipe([
+      f.path('target.files.0'),
+      f.hold(selectedFile.set),
+      f.path('name'),
+      weso.publish.fileChange,
+    ]),
   }
 })
 
@@ -66,6 +71,15 @@ const readNextBlob = blob => {
   r.onload = progressCb
   r.readAsArrayBuffer(blob)
 }
+
+weso.uploadStatus(({ data: progress }) => {
+  console.log('uploadStatus', { progress })
+  if (!progress) return
+  const file = selectedFile()
+  progressBar.setValue(progress / file.size)
+  progressBar.pause()
+  uploadButton.textContent = 'Reprendre'
+})
 
 const slice = prefix.call('slice')
 weso.uploadReady(({ data: { progress } }) => {
@@ -82,10 +96,9 @@ weso.uploadReady(({ data: { progress } }) => {
   uploadButton.disabled = false
 })
 
-
-const footer = h('footer.footer.text-center')
 const container = h('.container')
 const content = h('.row.marketing')
+const footer = h('footer.footer.text-center')
 const header = h('.header.clearfix.text-center')
 
 const weshForm = form({
