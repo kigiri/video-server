@@ -73,12 +73,25 @@ const readNextBlob = blob => {
 }
 
 weso.uploadStatus(({ data: progress }) => {
-  console.log('uploadStatus', { progress })
-  if (!progress) return
+  if (!progress) {
+    progressBar.setValue(0)
+    progressBar.hide()
+    uploadButton.disabled = false
+    return uploadButton.textContent = 'Envoyer'
+  }
+
   const file = selectedFile()
+
   progressBar.setValue(progress / file.size)
   progressBar.pause()
-  uploadButton.textContent = 'Reprendre'
+
+  if (progress < file.size) {
+    uploadButton.disabled = false
+    return uploadButton.textContent = 'Reprendre'
+  }
+  uploadButton.textContent = 'file already uploaded'
+  uploadButton.disabled = true
+
 })
 
 const slice = prefix.call('slice')
