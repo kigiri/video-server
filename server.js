@@ -33,10 +33,10 @@ tupac({
   weso: true,
   title: 'Elzéar vidéo server (beta)',
   before: [ (req, res) => {
+/*
     const session = weso.getOrInitSession(req, res, {
       superSecure: 'true dat !!',
     })
-
     switch (req.url) {
       case '/video':
       case '/video/':
@@ -44,6 +44,7 @@ tupac({
       case '/server/': return send401(res)
       //case '/app.js': {}
     }
+    */
     next(res)
   } ]
 }).then((server) => {
@@ -51,9 +52,9 @@ tupac({
     server,
     subscribe: common.wesoClient,
     publish: common.wesoServer,
-    secret: 'oh lol this is fun',
+    //secret: 'oh lol this is fun',
     //secure: { key, cert },
-    login: true,
+    //login: true,
   })
 
   weso.uploadStart(uploadStart)
@@ -104,14 +105,8 @@ const uploadDone = ({ ws }) => {
     .audioChannels(1)
     .fps(29.7)
     .size('720x?')
-    .on('error', err => {
-      console.log(err)
-      ws.processingError(err.message)
-    })
-    .on('end', () => {
-      console.log('fini !')
-      ws.processingEnd()
-    })
+    .on('error', err => ws.processingError(err.message))
+    .on('end', () => ws.processingEnd(output))
     .save(output)
   console.log(`saving file to ${output}`)
   //Get Thumbnail Here
