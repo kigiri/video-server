@@ -8,8 +8,10 @@ const initWeso = require('izi/weso-node')
 const curry = require('izi/auto-curry')
 const oops = require('izi/oops')
 const f = require('izi/flow')
+const uuid = require('izi/uuid')
 const tupac = require('tupac/lib/tupac')
 const common = require('./common.js')
+const ffmpeg = require('fluent-ffmpeg')
 
 const notFound = oops('ENOENT')
 const sendError = curry((code, message, res) => {
@@ -67,11 +69,11 @@ const getFileSize = path => stat(path).then(_size, orZero)
 const tmpName = name => `${tmpDir}/${name}.part`
 
 const fileChange = ({ data, ws }) => getFileSize(tmpName(data))
-  .then(ws.uploadStatus)
+  .then(ws.uploadStatus, console.error)
 
 const uploadStart = ({ data: { file }, ws }) => {
-  file.path = tmpName(file.name)
   ws.session.file = file
+  file.path = tmpName(file.name)
 
   Promise.all([ getFileSize(file.path), open(file.path, "a", 0755) ])
     .then(([ progress, fd ]) => {
@@ -87,20 +89,31 @@ const uploadProgress = ({ data, ws }) => {
   file.progress += common.chunk
   write(file.fd, data, null, 'binary')
     .then(() => ws.uploadReady({ progress: file.progress }))
-    .catch(err => {
-      err.stack = undefined
-      ws.uploadError(err)
-    })
+    .catch(err => ws.uploadError(err.message))
 }
 
 const uploadDone = ({ ws }) => {
   const file = ws.session.file
-  files[ws.id] = undefined
-  rename(file.path, `${vidDir}/${file.name}`)
-    .then(() => console.log('file ${file.name} uploaded'), console.error)
-
-ffmpeg('/path/to/file.avi')
-
+  ws.session.file = undefined
+  const output = `${vidDir}/${uuid().slice(0, 6)}${extname(file.name)}`
+  ffmpeg(file.path)
+    .videoCodec('libx264')
+    .videoBitrate('1024k')
+    .renice(5)
+    .audioCodec('libmp3lame')
+    .audioChannels(1)
+    .fps(29.7)
+    .size('720x?')
+    .on('error', err => {
+      console.log(err)
+      ws.processingError(err.message)
+    })
+    .on('end', () => {
+      console.log('fini !')
+      ws.processingEnd()
+    })
+    .save(output)
+  console.log(`saving file to ${output}`)
   //Get Thumbnail Here
   /*
 
@@ -115,5 +128,9 @@ ffmpeg('/path/to/file.avi')
   exec("ffmpeg -i Video/" + Name  + " -ss 01:30 -r 1 -an -vframes 1 -f mjpeg Video/" + Name  + ".jpg", function(err){
     socket.emit('Done', {'Image' : 'Video/' + Name + '.jpg'});
   });
+
+$ ffmpeg -re -i input.mkv -c:v libx264 -preset veryfast -maxrate 3000k \
+-bufsize 6000k -pix_fmt yuv420p -g 50 -c:a aac -b:a 160k -ac 2 \
+-ar 44100 -f flv rtmp://live.twitch.tv/app/<stream key>
   */
 }

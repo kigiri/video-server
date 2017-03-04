@@ -72,6 +72,27 @@ const readNextBlob = blob => {
   r.readAsArrayBuffer(blob)
 }
 
+weso.processingEnd(() => {
+  if (progressBar.textContent !== ' ') return
+  progressBar.pause()
+  progressBar.hide(2000)
+  uploadButton.classList.remove('loading', 'btn-primary')
+  uploadButton.classList.add('btn-success')
+  uploadButton.textContent = 'Envoi terminé'
+})
+weso.processingError(({ data: errorMessage }) => {
+  uploadButton.classList.remove('btn-primary')
+  uploadButton.classList.add('btn-error')
+  uploadButton.textContent = 'Erreur lors de l\'encodage'
+  console.log(errorMessage)
+})
+weso.uploadError(({ data: errorMessage }) => {
+  uploadButton.classList.remove('btn-primary')
+  uploadButton.classList.add('btn-error')
+  uploadButton.textContent = 'Erreur lors de l\'envois'
+  console.log(errorMessage)
+})
+
 weso.uploadStatus(({ data: progress }) => {
   if (!progress) {
     progressBar.setValue(0)
@@ -89,9 +110,8 @@ weso.uploadStatus(({ data: progress }) => {
     uploadButton.disabled = false
     return uploadButton.textContent = 'Reprendre'
   }
-  uploadButton.textContent = 'file already uploaded'
+  uploadButton.textContent = 'Fichier déja existant'
   uploadButton.disabled = true
-
 })
 
 const slice = prefix.call('slice')
@@ -101,12 +121,9 @@ weso.uploadReady(({ data: { progress } }) => {
     readNextBlob(slice(file, progress, Math.min(chunk + progress), file.size))
     return progressBar.setValue(progress / file.size)
   }
-  progressBar.setValue(1)
-  progressBar.pause()
-  progressBar.hide(2000)
-  uploadButton.classList.remove('disabled', 'loading')
-  uploadButton.textContent = 'Envoyer'
-  uploadButton.disabled = false
+  progressBar.setValue(2, ' ')
+  uploadButton.textContent = 'Encodage de la vidéo'
+  weso.publish.uploadDone()
 })
 
 const container = h('.container')

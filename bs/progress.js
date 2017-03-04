@@ -19,12 +19,13 @@ module.exports = (initialValue = 0) => {
 
   el.pause = () => bar.classList.remove(ANIMATED, STRIPED)
   el.start = () => bar.classList.add(ANIMATED, STRIPED)
-  el.setValue = n => {
+  el.setValue = (n, text) => {
     n = Math.min(Math.max(n * 100, 1.5), 100)
+    console.log({ n })
     el.start()
     el.show()
     bar.setAttribute('aria-valuenow', n)
-    bar.style.width = bar.textContent = `${Math.floor(n)}%`
+    bar.style.width = bar.textContent = text || `${Math.floor(n)}%`
   }
 
   el.setValue(initialValue)

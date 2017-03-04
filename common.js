@@ -10,7 +10,9 @@ module.exports = {
     'uploadStatus',
     'uploadReady',
     'uploadError',
-    'debug', 
+    'processingEnd',
+    'processingError',
+    'debug',
     'tupac',
   ],
 }
