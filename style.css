@@ -31,6 +31,10 @@ body {
   line-height: 3rem;
 }
 
+.header svg {
+  max-width: 383px;
+}
+
 /* Custom page footer */
 .footer {
   padding-top: 1.5rem;

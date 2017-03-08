@@ -7,6 +7,9 @@ const formGroup = h('.form-group')
 const bsLabel = h('label')
 const baseInput = h('input.form-control', { type: 'text' })
 
+const restoreState = (input, id) => (input.type !== 'file' && localStorage[id])
+  && (input.value = localStorage[id])
+
 let inputId = 0
 const input = (label, props, children) => {
   props.id || (props.id = `bs-input-${++inputId}`)
@@ -17,18 +20,15 @@ const input = (label, props, children) => {
   const el = formGroup([
     label && bsLabel({ htmlFor: props.id }, label),
     _input,
-    props.help && helpText({ id: props['aria-describedby'] }),
+    props.help && helpText({ id: props['aria-describedby'] }, props.help),
     children,
   ])
 
   if (_input.type !== 'file') {
-    if (localStorage[props.id]) {
-      _input.value = localStorage[props.id]
-    }
     _input.addEventListener('change', () => localStorage[props.id] = _input.value)
   }
 
-
+  el.restore = () => restoreState(input, props.id)
   el.input = _input
 
   return el
@@ -60,6 +60,7 @@ const enable = el => {
 
 const disableAll = each(disable)
 const enableAll = each(enable)
+const restoreAll = each(el => el.restore())
 
 const getInputs = map(({input}) => input)
 const form = inputDescriptors => {
@@ -69,6 +70,7 @@ const form = inputDescriptors => {
   elems.values = () => getValues(inputs)
   elems.disableAll = () => disableAll(inputs)
   elems.enableAll = () => enabledAll(inputs)
+  elems.restoreAll = () => restoreAll(elems)
 
   return elems
 }
