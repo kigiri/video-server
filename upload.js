@@ -87,7 +87,7 @@ module.exports = () => {
     progressBar.hide(2000)
     alertBox.success([
       'Votre video est prete, ',
-      alertLink({ href: `/#v=${videoHash}` }, 'regardez-la maintenant'),
+      alertLink({ href: `#v=${videoHash}` }, 'regardez-la maintenant'),
     ])
   })
 
