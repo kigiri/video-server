@@ -5,6 +5,7 @@
   "dependencies": {
     "fluent-ffmpeg": "^2.1.0",
     "izi": "git://github.com/kigiri/izi.git#master",
+    "jsonwebtoken": "^7.3.0",
     "tupac": "git://github.com/kigiri/tupac.git#master"
   }
 }

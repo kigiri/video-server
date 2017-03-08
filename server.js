@@ -1,17 +1,21 @@
 const http = require('http')
 const { resolve, extname } = require('path')
-const { stat, open, write, mkdir } = require('izi/mz')('fs')
+const mz = require('izi/mz')
 const { split, remove } = require('izi/str')
 const merge = require('izi/collection/merge')
 const map = require('izi/collection/map')
 const initWeso = require('izi/weso-node')
 const curry = require('izi/auto-curry')
+const filter = require('izi/collection/filter')
 const oops = require('izi/oops')
 const f = require('izi/flow')
 const uuid = require('izi/uuid')
 const tupac = require('tupac/lib/tupac')
 const common = require('./common.js')
 const ffmpeg = require('fluent-ffmpeg')
+const { stat, open, write, mkdir, writeFile } = mz('fs')
+const { ffprobe } = mz(ffmpeg)
+//const { parse: parseUrl } = require('url')
 
 const notFound = oops('ENOENT')
 const sendError = curry((code, message, res) => {
@@ -33,6 +37,9 @@ tupac({
   weso: true,
   title: 'Elzéar vidéo server (beta)',
   before: [ (req, res) => {
+    //const videoId = req.url.split(/^\/watch\/([A-Za-z0-9_-]{0,6})/)[1]
+    //console.log(req.headers)
+    //const { pathname } = parseUrl(req.url)
 /*
     const session = weso.getOrInitSession(req, res, {
       superSecure: 'true dat !!',
@@ -72,8 +79,9 @@ const tmpName = name => `${tmpDir}/${name}.part`
 const fileChange = ({ data, ws }) => getFileSize(tmpName(data))
   .then(ws.uploadStatus, console.error)
 
-const uploadStart = ({ data: { file }, ws }) => {
-  ws.session.file = file
+const uploadStart = ({ data, ws }) => {
+  const { file } = Object.assign(ws.session, data)
+
   file.path = tmpName(file.name)
 
   Promise.all([ getFileSize(file.path), open(file.path, "a", 0755) ])
@@ -93,22 +101,69 @@ const uploadProgress = ({ data, ws }) => {
     .catch(err => ws.uploadError(err.message))
 }
 
+const getUuid = () => {
+  const id = uuid().slice(0, 6)
+  return stat(`${vidDir}/${id}.json`).then(getUuid, () => id)
+}
+
+const getStreamType = type => f.pipe(f.path('streams'),
+  filter(s => s.codec_type === type),
+  f.path('0'))
+
+const getAudio = getStreamType('audio')
+const getVideo = getStreamType('video')
+
 const uploadDone = ({ ws }) => {
   const file = ws.session.file
   ws.session.file = undefined
-  const output = `${vidDir}/${uuid().slice(0, 6)}${extname(file.name)}`
-  ffmpeg(file.path)
-    .videoCodec('libx264')
-    .videoBitrate('1024k')
-    .renice(5)
-    .audioCodec('libmp3lame')
-    .audioChannels(1)
-    .fps(29.7)
-    .size('720x?')
-    .on('error', err => ws.processingError(err.message))
-    .on('end', () => ws.processingEnd(output))
-    .save(output)
-  console.log(`saving file to ${output}`)
+  Promise.all([
+    getUuid(),
+    ffprobe(file.path),
+  ]).then(([ id, metadata ]) => {
+    const { width, height, avg_frame_rate } = getVideo(metadata)
+    const fps = eval(avg_frame_rate)
+    const output = `${vidDir}/${id}${extname(file.name)}`
+    const ext = extname(file.name)
+    const dataFile = `${vidDir}/${id}.json`
+    const dataContent = JSON.stringify({
+      id,
+      ext,
+      fps,
+      width,
+      height,
+      date: Date.now(),
+      name: file.name,
+      size: file.size,
+      lastName: ws.session.lastName,
+      firstName: ws.session.firstName,
+    })
+
+    const ffmpegStream = ffmpeg(file.path)
+      .videoCodec('libx264')
+      .videoBitrate('1024k')
+      .renice(5)
+      .audioCodec('libmp3lame')
+      .audioChannels(1)
+
+    if (fps > 29.7) {
+      ffmpegStream.fps(29.7)
+    }
+
+    if (width > 720) {
+      ffmpegStream.size('720x?')
+    } else if (height > 405) {
+      ffmpegStream.size('?x405')
+    }
+
+    ffmpegStream
+      .on('error', err => ws.processingError(err.message))
+      .on('end', () => ws.processingEnd(id))
+      .save(output)
+
+    console.log(`saving file to ${output}`)
+
+    return writeFile(dataFile, dataContent)
+  }).catch(console.error)
   //Get Thumbnail Here
   /*
 
