@@ -21,6 +21,8 @@ const lead = h('p.lead', {
     fontVariant: 'small-caps',
     marginBottom: '2px',
     letterSpacing: '1.25px',
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
   }
 })
 
