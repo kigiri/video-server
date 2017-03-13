@@ -97,7 +97,7 @@ module.exports = () => {
   ws.processingError(({ data }) =>
     alertBox.danger(`Erreur lors de l'encodage : ${data}`))
 
-  ws.on.close(() => alertBox.error(`connexion avec le serveur perdu`))
+  ws.on.close(() => alertBox.danger(`connexion avec le serveur perdu`))
   ws.on.open(() => alertBox.success(`connexion avec le serveur reussi`))
   ws.on.error(console.error)
 

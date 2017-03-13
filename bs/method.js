@@ -37,12 +37,14 @@ module.exports = {
 
     el.hide = n => {
       clearTimeout(hideTimeout)
-      hideTimeout = setTimeout(() => el.classList.add('fade'), n)
-      return el
+      return ((n
+        ? (hideTimeout = setTimeout(() => el.style.opacity = 0, n))
+        : (el.style.opacity = 0)), el)
     }
     el.show = () => {
       clearTimeout(hideTimeout)
-      el.classList.remove('fade')
+      el.style.visibility = ''
+      el.style.opacity = 1
       return el
     }
   }

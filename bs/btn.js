@@ -15,7 +15,6 @@ method.class.forEach(c => {
     el.disable = content => (el.disabled = true, el.replaceContent(content))
     el.enable = content => (el.disabled = false, el.replaceContent(content))
 
-
     prefixed.forEach(prefix => {
       const changeContentAndClass = el[prefix.class] = content =>
         (el.replaceContent(content), prefix.fn(el))

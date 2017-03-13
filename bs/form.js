@@ -64,7 +64,7 @@ const restoreAll = each(el => el.restore())
 
 const getInputs = map(({input}) => input)
 const form = inputDescriptors => {
-  elems = buildInputs(inputDescriptors)
+  const elems = buildInputs(inputDescriptors)
   const inputs = getInputs(elems)
 
   elems.values = () => getValues(inputs)

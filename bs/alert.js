@@ -1,6 +1,6 @@
 const h = require('izi/vanilla-h')
 const span = h('span')
-const alertBox = h('.alert.alert-success.text-center', { role: 'alert' })
+const alertBox = h('.alert.alert-info.text-center', { role: 'alert' })
 const method = require('./method')
 
 const prefixed = method.prefixClass('alert')

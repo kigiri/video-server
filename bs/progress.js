@@ -28,7 +28,7 @@ module.exports = (initialValue = 0) => {
     bar.style.width = bar.textContent = text || `${Math.floor(n)}%`
   }
 
-  el.setValue(initialValue)
+  initialValue && el.setValue(initialValue)
 
   return el
 }
